@@ -8,18 +8,6 @@
 pragma solidity ^0.4.15;
 
 ////// lib/ds-roles/lib/ds-auth/src/auth.sol
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* pragma solidity ^0.4.13; */
 
@@ -108,21 +96,9 @@ contract DSAuth is DSAuthEvents {
 ////// lib/ds-thing/lib/ds-math/src/math.sol
 /// math.sol -- mixin for inline numerical wizardry
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
+// 安全数学计算合约
 contract DSMath {
     function add(uint x, uint y) internal pure returns (uint z) {
         require((z = x + y) >= x);
@@ -134,15 +110,19 @@ contract DSMath {
         require(y == 0 || (z = x * y) / y == x);
     }
 
+    // 小于等于（uint）
     function min(uint x, uint y) internal pure returns (uint z) {
         return x <= y ? x : y;
     }
+    // 大于等于（uint）
     function max(uint x, uint y) internal pure returns (uint z) {
         return x >= y ? x : y;
     }
+    // 小于等于（int）
     function imin(int x, int y) internal pure returns (int z) {
         return x <= y ? x : y;
     }
+    // 大于等于（int）
     function imax(int x, int y) internal pure returns (int z) {
         return x >= y ? x : y;
     }
@@ -150,15 +130,19 @@ contract DSMath {
     uint constant WAD = 10 ** 18;
     uint constant RAY = 10 ** 27;
 
+    // (x*y + 10^18/2) 10^18
     function wmul(uint x, uint y) internal pure returns (uint z) {
         z = add(mul(x, y), WAD / 2) / WAD;
     }
+    // (x*y + 10^27/2) 10^27
     function rmul(uint x, uint y) internal pure returns (uint z) {
         z = add(mul(x, y), RAY / 2) / RAY;
     }
+    // (x*10^18 + y/2) / y
     function wdiv(uint x, uint y) internal pure returns (uint z) {
         z = add(mul(x, WAD), y / 2) / y;
     }
+    // (x*10^27 + y/2) / y
     function rdiv(uint x, uint y) internal pure returns (uint z) {
         z = add(mul(x, RAY), y / 2) / y;
     }
@@ -194,40 +178,41 @@ contract DSMath {
 ////// lib/ds-thing/lib/ds-note/src/note.sol
 /// note.sol -- the `note' modifier, for logging calls as events
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
 contract DSNote {
+
+    // 日志记录
+    // anonymous event支持4个indexed入参，普通的event最多支持3个indexed的入参
+    // 然后默认会将event的签名做keccak256处理，生成的结果作为topic[0],其他3个indexed生成topic[1] -> topic[3]
+    // 而匿名事件的话由于不会将event的签名生成topic[0]，所以可以多加入一个indexed（或者说自定义topic[0]）。
     event LogNote(
+        // 函数签名
         bytes4   indexed  sig,
+        // msg.sender
         address  indexed  guy,
+        // 参数
         bytes32  indexed  foo,
+        // 参数
         bytes32  indexed  bar,
+        // msg.value
         uint              wad,
+        // msg.data
         bytes             fax
     ) anonymous;
 
+    // 修饰器，记录日志
     modifier note {
         bytes32 foo;
         bytes32 bar;
 
         assembly {
+            // 获取执行合约交易时的调用数据，同第4个字节开始的32个字节[4~36)
             foo := calldataload(4)
+            // 获取执行合约交易时的调用数据，同第36个字节开始的32个字符[36, 68)
             bar := calldataload(36)
         }
-
+        // 参数依次为函数标识符、函数发起人、转账金额、函数调用值
         LogNote(msg.sig, msg.sender, foo, bar, msg.value, msg.data);
 
         _;
@@ -237,64 +222,42 @@ contract DSNote {
 ////// lib/ds-thing/src/thing.sol
 // thing.sol - `auth` with handy mixins. your things should be DSThings
 
-// Copyright (C) 2017  DappHub, LLC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
 /* import 'ds-auth/auth.sol'; */
 /* import 'ds-note/note.sol'; */
 /* import 'ds-math/math.sol'; */
 
+// 继承了权限、日志、算数合约
 contract DSThing is DSAuth, DSNote, DSMath {
 }
 
 ////// lib/ds-token/lib/ds-stop/src/stop.sol
 /// stop.sol -- mixin for enable/disable functionality
 
-// Copyright (C) 2017  DappHub, LLC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
 /* import "ds-auth/auth.sol"; */
 /* import "ds-note/note.sol"; */
 
+// 停止合约，继承日志、权限合约
 contract DSStop is DSNote, DSAuth {
 
+    // 停止状态标识
     bool public stopped;
 
+    // 修饰符，限定非停止状态下运行
     modifier stoppable {
         require(!stopped);
         _;
     }
+
+    // 停止
     function stop() public auth note {
         stopped = true;
     }
+
+    // 启动
     function start() public auth note {
         stopped = false;
     }
@@ -302,24 +265,13 @@ contract DSStop is DSNote, DSAuth {
 }
 
 ////// lib/ds-token/lib/erc20/src/erc20.sol
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* pragma solidity ^0.4.8; */
 
 // Token standard API
 // https://github.com/ethereum/EIPs/issues/20
 
+// 标准ERC20合约（抽象）
 contract ERC20 {
     function totalSupply() public view returns (uint supply);
     function balanceOf( address who ) public view returns (uint value);
@@ -336,30 +288,16 @@ contract ERC20 {
 ////// lib/ds-token/src/base.sol
 /// base.sol -- basic ERC20 implementation
 
-// Copyright (C) 2015, 2016, 2017  DappHub, LLC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
 /* import "erc20/erc20.sol"; */
 /* import "ds-math/math.sol"; */
 
+// ERC20基础实现，继承erc20，安全算数
 contract DSTokenBase is ERC20, DSMath {
-    uint256                                            _supply;
-    mapping (address => uint256)                       _balances;
-    mapping (address => mapping (address => uint256))  _approvals;
+    uint256 _supply;
+    mapping (address => uint256) _balances;
+    mapping (address => mapping (address => uint256)) _approvals;
 
     function DSTokenBase(uint supply) public {
         _balances[msg.sender] = supply;
@@ -380,10 +318,7 @@ contract DSTokenBase is ERC20, DSMath {
         return transferFrom(msg.sender, dst, wad);
     }
 
-    function transferFrom(address src, address dst, uint wad)
-        public
-        returns (bool)
-    {
+    function transferFrom(address src, address dst, uint wad) public returns (bool) {
         if (src != msg.sender) {
             _approvals[src][msg.sender] = sub(_approvals[src][msg.sender], wad);
         }
@@ -408,27 +343,13 @@ contract DSTokenBase is ERC20, DSMath {
 ////// lib/ds-token/src/token.sol
 /// token.sol -- ERC20 implementation with minting and burning
 
-// Copyright (C) 2015, 2016, 2017  DappHub, LLC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 /* pragma solidity ^0.4.13; */
 
 /* import "ds-stop/stop.sol"; */
 
 /* import "./base.sol"; */
 
+// ERC20实现，继承DSToken（总发行量为0）、停止合约
 contract DSToken is DSTokenBase(0), DSStop {
 
     bytes32  public  symbol;
@@ -441,19 +362,20 @@ contract DSToken is DSTokenBase(0), DSStop {
     event Mint(address indexed guy, uint wad);
     event Burn(address indexed guy, uint wad);
 
+    // 取消委托（可停止）
     function approve(address guy) public stoppable returns (bool) {
         return super.approve(guy, uint(-1));
     }
 
+    // 委托（可停止）
     function approve(address guy, uint wad) public stoppable returns (bool) {
         return super.approve(guy, wad);
     }
 
-    function transferFrom(address src, address dst, uint wad)
-        public
-        stoppable
-        returns (bool)
+    // 转账（可停止）
+    function transferFrom(address src, address dst, uint wad) public stoppable returns (bool)
     {
+        // 委托转账，要求被委托人委托金额不为-1
         if (src != msg.sender && _approvals[src][msg.sender] != uint(-1)) {
             _approvals[src][msg.sender] = sub(_approvals[src][msg.sender], wad);
         }
@@ -466,28 +388,36 @@ contract DSToken is DSTokenBase(0), DSStop {
         return true;
     }
 
+    // 转账给其他账户，类似transfer
     function push(address dst, uint wad) public {
         transferFrom(msg.sender, dst, wad);
     }
+    // 从其他账户向自己转账
     function pull(address src, uint wad) public {
         transferFrom(src, msg.sender, wad);
     }
+    // 从A向B转账
     function move(address src, address dst, uint wad) public {
         transferFrom(src, dst, wad);
     }
 
+    // 铸币
     function mint(uint wad) public {
         mint(msg.sender, wad);
     }
+    // 销毁
     function burn(uint wad) public {
         burn(msg.sender, wad);
     }
+    // 铸币（可停止、权限检查）
     function mint(address guy, uint wad) public auth stoppable {
         _balances[guy] = add(_balances[guy], wad);
         _supply = add(_supply, wad);
         Mint(guy, wad);
     }
+    // 销毁（可停止、权限检查）
     function burn(address guy, uint wad) public auth stoppable {
+        // 委托销毁
         if (guy != msg.sender && _approvals[guy][msg.sender] != uint(-1)) {
             _approvals[guy][msg.sender] = sub(_approvals[guy][msg.sender], wad);
         }
@@ -498,7 +428,8 @@ contract DSToken is DSTokenBase(0), DSStop {
     }
 
     // Optional token name
-    bytes32   public  name = "";
+    // 可选参数，token名称
+    bytes32 public name = "";
 
     function setName(bytes32 name_) public auth {
         name = name_;
